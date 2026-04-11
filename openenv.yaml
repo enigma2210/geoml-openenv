@@ -1,0 +1,20 @@
+version: "1.0"
+name: "geoml-rescue-env"
+description: "A real-world ML Ops environment where an agent must debug and fix a broken geospatial machine learning pipeline (projection errors, temporal misalignments, memory leaks)."
+
+# We must define a minimum of 3 tasks with difficulty progression
+tasks:
+  - name: "task-1-projection-fix"
+    difficulty: "easy"
+    description: "Fix the EPSG projection string in the configuration to allow spatial data extraction."
+  - name: "task-2-temporal-alignment"
+    difficulty: "medium"
+    description: "Rewrite the pandas merge logic to correctly align multi-year temporal satellite features."
+  - name: "task-3-memory-leak"
+    difficulty: "hard"
+    description: "Refactor the image processing loop to process in chunks, avoiding the .mosaic() OOM crash."
+
+# Linking our configuration to the Pydantic models we just wrote
+observation_model: "geoml_models.GeoMLObservation"
+action_model: "geoml_models.GeoMLAction"
+reward_model: "geoml_models.GeoMLReward"
