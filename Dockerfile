@@ -17,5 +17,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all the rest of our environment files into the container
 COPY . .
 
-# OpenEnv handles the execution port automatically, so we just expose the default
-EXPOSE 8000
+# Start the FastAPI server using Uvicorn on Hugging Face's default port (7860)
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
