@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List, Literal
 
-# 1. THE ACTION SPACE: What the AI is allowed to do.
 class GeoMLAction(BaseModel):
     command: Literal["list_files", "read_file", "edit_file", "run_pipeline"] = Field(
         ..., description="The command you want to execute."
@@ -16,7 +15,7 @@ class GeoMLAction(BaseModel):
         None, description="If editing a file, the new text you want to insert."
     )
 
-# 2. THE OBSERVATION SPACE: What the AI sees after taking an action.
+
 class GeoMLObservation(BaseModel):
     current_objective: str = Field(
         ..., description="The specific bug or pipeline issue you need to fix."
@@ -28,7 +27,7 @@ class GeoMLObservation(BaseModel):
         ..., description="List of files currently in the directory."
     )
 
-# 3. THE REWARD SPACE: How we grade the AI.
+.
 class GeoMLReward(BaseModel):
     score: float = Field(
         ..., description="A score between 0.0 and 1.0 evaluating the current state."
