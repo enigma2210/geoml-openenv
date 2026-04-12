@@ -11,14 +11,15 @@ from geoml_models import GeoMLAction, GeoMLObservation
 from geoml_env import GeoMLEnv
 
 
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy_key")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
+
 TASK_NAME = "geoml-rescue-task"
 BENCHMARK = "geoml-env"
 MAX_STEPS = 12
-TEMPERATURE = 0.1 
-SUCCESS_SCORE_THRESHOLD = 0.5 
+TEMPERATURE = 0.1
+SUCCESS_SCORE_THRESHOLD = 0.5
 
 SYSTEM_PROMPT = textwrap.dedent(
     """
@@ -95,7 +96,7 @@ def get_model_action(client: OpenAI, step: int, obs: GeoMLObservation, history: 
         return GeoMLAction(command="list_files")
 
 async def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     env = GeoMLEnv()
     
     history: List[str] = []
