@@ -1,3 +1,12 @@
+---
+title: GeoML Rescue Env
+emoji: 🌍
+colorFrom: blue
+colorTo: green
+sdk: docker
+pinned: false
+---
+
 # 🌍 GeoML-RescueEnv: The AI Flight Simulator
 
 Welcome to **GeoML-RescueEnv**! 
