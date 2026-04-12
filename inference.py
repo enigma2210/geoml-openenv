@@ -141,7 +141,8 @@ async def main() -> None:
                 break
                 
         # Calculate final normalized score
-        score = sum(rewards) / float(MAX_STEPS) if MAX_STEPS > 0 else 0.0
+        MAX_TOTAL_REWARD = 1.60
+        score = sum(rewards) / MAX_TOTAL_REWARD
         score = min(max(score, 0.0), 1.0)
         success = score >= SUCCESS_SCORE_THRESHOLD
 
