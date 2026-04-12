@@ -17,7 +17,7 @@ MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 TASK_NAME = "geoml-rescue-task"
 BENCHMARK = "geoml-env"
 MAX_STEPS = 12
-TEMPERATURE = 0.1 # Keep it low for deterministic, strict JSON output
+TEMPERATURE = 0.1 
 SUCCESS_SCORE_THRESHOLD = 0.5 
 
 SYSTEM_PROMPT = textwrap.dedent(
@@ -119,16 +119,13 @@ async def main() -> None:
         for step in range(1, MAX_STEPS + 1):
             if env.done:
                 break
-
-            
+                
             action_obj = get_model_action(client, step, obs, history)
-            
             
             obs, reward_obj, done, info = await env.step(action_obj)
             
             reward_val = reward_obj.score
             error = None
-            
             
             rewards.append(reward_val)
             steps_taken = step
