@@ -78,13 +78,13 @@ async def get_dashboard():
                     const data = await response.json();
                     const progress = data.max_progress;
                     
-                    // Reset all
+                    
                     for(let i=1; i<=3; i++) {
                         document.getElementById('node-'+i).className = 'node';
                         document.getElementById('arrow-'+i).className = 'arrow';
                     }
 
-                    // Update UI based on pipeline progress
+                    
                     for(let i=1; i<=3; i++) {
                         let node = document.getElementById('node-'+i);
                         let arrow = document.getElementById('arrow-'+i);
@@ -98,7 +98,7 @@ async def get_dashboard():
                     }
 
                     let statusText = "Agent is debugging pipeline...";
-                    if (progress === 3) statusText = "MISSION ACCOMPLISHED: Pipeline Healthy. R² = 0.82";
+                    if (progress === 3) statusText = "Pipeline Healthy";
                     document.getElementById('status-text').innerText = "Status: " + statusText + " | Max Progress: " + progress + "/3";
 
                 } catch (e) {
@@ -106,7 +106,7 @@ async def get_dashboard():
                 }
             }
 
-            // Poll the backend every 1.5 seconds
+            
             setInterval(fetchState, 1500);
             fetchState();
         </script>
