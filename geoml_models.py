@@ -27,7 +27,6 @@ class GeoMLObservation(BaseModel):
         ..., description="List of files currently in the directory."
     )
 
-.
 class GeoMLReward(BaseModel):
     score: float = Field(
         ..., description="A score between 0.0 and 1.0 evaluating the current state."
