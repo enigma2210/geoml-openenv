@@ -104,12 +104,12 @@ if __name__ == "__main__":
         
         if filepath.endswith('.py'):
             try:
-                # 1. Syntax Verification Reward
+                
                 tree = ast.parse(content)
                 reward += 0.05
                 feedback += "[AST: Syntax Valid] "
                 
-                # 2. Structural Logic Rewards
+                
                 if filepath == "temporal_merge.py":
                     for node in ast.walk(tree):
                         if isinstance(node, ast.Call) and getattr(node.func, 'attr', '') == 'merge':
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                     self.files[action.filepath] = current_content.replace(action.target_text, action.new_text)
                     self._write_files_to_disk()
                     
-                    # 🚀 TRIGGERS THE AST ENGINE ON EVERY EDIT
+                    
                     ast_reward, ast_feedback = self._compute_dense_reward(action.filepath, self.files[action.filepath])
                     
                     terminal_output = f"Successfully updated {action.filepath}."
