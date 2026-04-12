@@ -3,35 +3,50 @@ import os
 import subprocess
 import tempfile
 import shutil
+import random
 from typing import Dict, Any, Tuple
 from geoml_models import GeoMLAction, GeoMLObservation, GeoMLReward
 
-# The actual Python scripts that will be executed in the sandbox
-INITIAL_FILES = {
-    "config.yaml": "projection: 'EPSG:9999'\nresolution: '10m'\n",
-    
-    "temporal_merge.py": """import pandas as pd
+class GeoMLEnv:
+    def __init__(self):
+        # Create a secure temporary directory for execution
+        self.workspace = tempfile.mkdtemp()
+        self.max_progress = 0
+        self.done = False
+        self.files: Dict[str, str] = {}
+
+    def _generate_procedural_files(self) -> Dict[str, str]:
+        """The Chaos Engine: Generates syntactically valid but logically broken code."""
+        # Randomize the exact nature of the bugs for infinite replayability
+        bad_epsg = random.choice(['EPSG:3857', 'EPSG:27700', 'EPSG:900913', 'EPSG:4269'])
+        bad_merge_key = random.choice(['wrong_id', 'spatial_index', 'temp_id', 'uuid'])
+        bad_strategy = random.choice(['mosaic_all', 'process_full_batch', 'load_entire_dataset'])
+
+        return {
+            "config.yaml": f"projection: '{bad_epsg}'\nresolution: '10m'\n",
+            
+            "temporal_merge.py": f"""import pandas as pd
 
 def merge_data():
-    df = pd.DataFrame({'spatial_id': [1,2,3], 'val': [10,20,30]})
-    df_lag = pd.DataFrame({'spatial_id': [1,2,3], 'lag_val': [5,15,25]})
+    df = pd.DataFrame({{'spatial_id': [1,2,3], 'val': [10,20,30]}})
+    df_lag = pd.DataFrame({{'spatial_id': [1,2,3], 'lag_val': [5,15,25]}})
     
     # BUG: Misaligned temporal features due to wrong merge key
-    df_merged = df.merge(df_lag, on='wrong_id')
+    df_merged = df.merge(df_lag, on='{bad_merge_key}')
     return df_merged
 """,
 
-    "extract.py": """def process_images():
+            "extract.py": f"""def process_images():
     # BUG: Processing all images at once causes an OOM crash
-    strategy = 'mosaic_all'
+    strategy = '{bad_strategy}'
     
-    if strategy == 'mosaic_all':
-        raise MemoryError("FATAL: Out of Memory (OOM) during .mosaic(). Change strategy to 'chunk'.")
+    if strategy == '{bad_strategy}':
+        raise MemoryError(f"FATAL: Out of Memory (OOM) using {{strategy}}. Change strategy to 'chunk'.")
     elif strategy == 'chunk':
         print("SUCCESS: Pipeline completed extraction perfectly. R-squared baseline achieved: 0.82")
 """,
 
-    "pipeline.py": """import yaml
+            "pipeline.py": """import yaml
 import sys
 from temporal_merge import merge_data
 from extract import process_images
@@ -39,7 +54,6 @@ from extract import process_images
 def run():
     print("--- Running Pipeline Diagnostics ---")
     
-    # Task 1: Check Config
     with open('config.yaml') as f:
         config = yaml.safe_load(f)
     if config.get('projection') != 'EPSG:4326':
@@ -47,7 +61,6 @@ def run():
         sys.exit(1)
     print("SUCCESS: Projection validated.")
 
-    # Task 2: Check Temporal Merge
     try:
         df = merge_data()
         if 'lag_val' not in df.columns or len(df) != 3:
@@ -58,7 +71,6 @@ def run():
         print(f"ERROR during temporal merge: {e}")
         sys.exit(1)
     
-    # Task 3: Check Memory Extraction
     try:
         process_images()
     except MemoryError as e:
@@ -68,21 +80,13 @@ def run():
 if __name__ == "__main__":
     run()
 """
-}
-
-class GeoMLEnv:
-    def __init__(self):
-        # Create a secure temporary directory for execution
-        self.workspace = tempfile.mkdtemp()
-        self.max_progress = 0
-        self.done = False
-        self.files: Dict[str, str] = {}
+        }
 
     async def reset(self) -> GeoMLObservation:
-        """Wipes the state clean and provisions the workspace for a new episode."""
+        """Wipes the state clean, generates new bugs, and provisions the workspace for a new episode."""
         self.max_progress = 0
         self.done = False
-        self.files = copy.deepcopy(INITIAL_FILES)
+        self.files = self._generate_procedural_files()
         self._write_files_to_disk()
         
         return self._get_observation(
@@ -142,7 +146,7 @@ class GeoMLEnv:
                 feedback = "Malformed edit request."
 
         elif action.command == "run_pipeline":
-            # 🚀 TRUE EXECUTION: Run the actual python script in the sandbox
+            # TRUE EXECUTION: Run the actual python script in the sandbox
             result = subprocess.run(
                 ["python", "pipeline.py"], 
                 cwd=self.workspace, 
@@ -182,7 +186,7 @@ class GeoMLEnv:
 
     def _get_observation(self, terminal_output: str) -> GeoMLObservation:
         objectives = {
-            0: "Task 1 (Easy): Fix the spatial projection error in config.yaml by updating EPSG:9999 to EPSG:4326.",
+            0: "Task 1 (Easy): Fix the spatial projection error in config.yaml to expect EPSG:4326.",
             1: "Task 2 (Medium): Fix the pandas KeyError in temporal_merge.py by merging on 'spatial_id'.",
             2: "Task 3 (Hard): Fix the MemoryError in extract.py by changing the strategy to 'chunk'.",
             3: "All tasks completed! Pipeline is healthy."
