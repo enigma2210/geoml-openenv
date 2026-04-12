@@ -4,12 +4,12 @@ import subprocess
 import tempfile
 import shutil
 import random
+import ast
 from typing import Dict, Any, Tuple
 from geoml_models import GeoMLAction, GeoMLObservation, GeoMLReward
 
 class GeoMLEnv:
     def __init__(self):
-        # Create a secure temporary directory for execution
         self.workspace = tempfile.mkdtemp()
         self.max_progress = 0
         self.done = False
@@ -17,7 +17,6 @@ class GeoMLEnv:
 
     def _generate_procedural_files(self) -> Dict[str, str]:
         """The Chaos Engine: Generates syntactically valid but logically broken code."""
-        # Randomize the exact nature of the bugs for infinite replayability
         bad_epsg = random.choice(['EPSG:3857', 'EPSG:27700', 'EPSG:900913', 'EPSG:4269'])
         bad_merge_key = random.choice(['wrong_id', 'spatial_index', 'temp_id', 'uuid'])
         bad_strategy = random.choice(['mosaic_all', 'process_full_batch', 'load_entire_dataset'])
@@ -83,7 +82,6 @@ if __name__ == "__main__":
         }
 
     async def reset(self) -> GeoMLObservation:
-        """Wipes the state clean, generates new bugs, and provisions the workspace for a new episode."""
         self.max_progress = 0
         self.done = False
         self.files = self._generate_procedural_files()
@@ -94,11 +92,49 @@ if __name__ == "__main__":
         )
 
     def _write_files_to_disk(self):
-        """Synchronizes the in-memory files to the physical sandbox directory."""
         for filename, content in self.files.items():
             path = os.path.join(self.workspace, filename)
             with open(path, 'w') as f:
                 f.write(content)
+
+    def _compute_dense_reward(self, filepath: str, content: str) -> Tuple[float, str]:
+        """UPGRADE 3: AST-Based Dense Reward Shaping Engine"""
+        reward = 0.0
+        feedback = ""
+        
+        if filepath.endswith('.py'):
+            try:
+                # 1. Syntax Verification Reward
+                tree = ast.parse(content)
+                reward += 0.05
+                feedback += "[AST: Syntax Valid] "
+                
+                # 2. Structural Logic Rewards
+                if filepath == "temporal_merge.py":
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.Call) and getattr(node.func, 'attr', '') == 'merge':
+                            for kw in node.keywords:
+                                if kw.arg == 'on' and getattr(kw.value, 'value', '') == 'spatial_id':
+                                    reward += 0.15
+                                    feedback += "[AST: Optimal merge key detected] "
+                elif filepath == "extract.py":
+                    for node in ast.walk(tree):
+                        if isinstance(node, ast.Assign):
+                            for target in node.targets:
+                                if getattr(target, 'id', '') == 'strategy':
+                                    if getattr(node.value, 'value', '') == 'chunk':
+                                        reward += 0.15
+                                        feedback += "[AST: Memory chunking heuristic detected] "
+            except SyntaxError:
+                reward -= 0.1
+                feedback += "[AST: SyntaxError introduced] "
+                
+        elif filepath == "config.yaml":
+            if "EPSG:4326" in content:
+                reward += 0.15
+                feedback += "[Config: Valid spatial projection detected] "
+                
+        return reward, feedback
 
     async def state(self) -> Dict[str, Any]:
         return {
@@ -132,10 +168,14 @@ if __name__ == "__main__":
                 current_content = self.files[action.filepath]
                 if action.target_text in current_content:
                     self.files[action.filepath] = current_content.replace(action.target_text, action.new_text)
-                    self._write_files_to_disk() # Sync the patch to the actual execution sandbox
+                    self._write_files_to_disk()
+                    
+                    # 🚀 TRIGGERS THE AST ENGINE ON EVERY EDIT
+                    ast_reward, ast_feedback = self._compute_dense_reward(action.filepath, self.files[action.filepath])
+                    
                     terminal_output = f"Successfully updated {action.filepath}."
-                    step_reward = 0.05 
-                    feedback = "Applied code patch."
+                    step_reward = 0.05 + ast_reward 
+                    feedback = f"Applied patch. {ast_feedback}".strip()
                 else:
                     terminal_output = f"Error: Target text not found in {action.filepath}."
                     step_reward = -0.05 
@@ -146,7 +186,6 @@ if __name__ == "__main__":
                 feedback = "Malformed edit request."
 
         elif action.command == "run_pipeline":
-            # TRUE EXECUTION: Run the actual python script in the sandbox
             result = subprocess.run(
                 ["python", "pipeline.py"], 
                 cwd=self.workspace, 
@@ -154,10 +193,8 @@ if __name__ == "__main__":
                 text=True
             )
             
-            # Feed the real console output (including Python tracebacks) back to the agent
             terminal_output = result.stdout + "\n" + result.stderr
             
-            # Grade based on actual execution output
             current_progress = 0
             if "SUCCESS: Projection validated." in terminal_output:
                 current_progress = 1
@@ -167,7 +204,6 @@ if __name__ == "__main__":
                 current_progress = 3
                 self.done = True
             
-            # Anti-Exploit Reward Shaping: The agent only gets a large reward the FIRST time it beats a stage.
             if current_progress > self.max_progress:
                 step_reward = (current_progress - self.max_progress) * 0.3
                 self.max_progress = current_progress
@@ -193,10 +229,9 @@ if __name__ == "__main__":
         }
         return GeoMLObservation(
             current_objective=objectives.get(self.max_progress, "Unknown"),
-            terminal_output=terminal_output.strip()[-2000:], # Prevent prompt context overflow
+            terminal_output=terminal_output.strip()[-2000:], 
             available_files=list(self.files.keys())
         )
 
     async def close(self):
-        """Clean up the physical temporary directory to prevent memory leaks."""
         shutil.rmtree(self.workspace, ignore_errors=True)
