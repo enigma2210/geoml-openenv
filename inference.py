@@ -42,14 +42,12 @@ SYSTEM_PROMPT = textwrap.dedent(
     """
 ).strip()
 
-
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
     error_val = error if error else "null"
     done_val = str(done).lower()
-    
     safe_action = action.replace('\n', ' ').replace('\r', '')[:100]
     print(f"[STEP] step={step} action={safe_action} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
 
@@ -57,9 +55,7 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
-
 def extract_json(text: str) -> dict:
-    """Fallback parser in case the LLM wraps JSON in markdown."""
     try:
         return json.loads(text)
     except json.JSONDecodeError:
@@ -95,14 +91,11 @@ def get_model_action(client: OpenAI, step: int, obs: GeoMLObservation, history: 
         raw_text = (completion.choices[0].message.content or "").strip()
         parsed_json = extract_json(raw_text)
         return GeoMLAction(**parsed_json)
-    except Exception as exc:
-        
+    except Exception:
         return GeoMLAction(command="list_files")
 
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-    
-    
     env = GeoMLEnv()
     
     history: List[str] = []
@@ -121,22 +114,19 @@ async def main() -> None:
                 break
                 
             action_obj = get_model_action(client, step, obs, history)
-            
             obs, reward_obj, done, info = await env.step(action_obj)
             
             reward_val = reward_obj.score
-            error = None
-            
             rewards.append(reward_val)
             steps_taken = step
             action_str = f"{action_obj.command}({action_obj.filepath})"
             
-            log_step(step=step, action=action_str, reward=reward_val, done=done, error=error)
+            log_step(step=step, action=action_str, reward=reward_val, done=done, error=None)
             history.append(f"Step {step}: {action_str} -> {reward_obj.feedback}")
             
             if done:
                 break
-                
+        
         
         MAX_TOTAL_REWARD = 1.60
         score = sum(rewards) / MAX_TOTAL_REWARD
@@ -144,6 +134,7 @@ async def main() -> None:
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:
+        
         await env.close()
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
