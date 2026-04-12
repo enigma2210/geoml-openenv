@@ -29,7 +29,7 @@ async def state_env():
 async def health():
     return {"status": "ok"}
 
-# --- THE STAGE SHOWSTOPPER: LIVE DASHBOARD ---
+
 @app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
     return """
