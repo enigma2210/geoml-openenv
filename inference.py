@@ -10,7 +10,7 @@ from openai import OpenAI
 from geoml_models import GeoMLAction, GeoMLObservation
 from geoml_env import GeoMLEnv
 
-# --- Mandatory Environment Variables ---
+
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY", "dummy_key")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
@@ -42,14 +42,14 @@ SYSTEM_PROMPT = textwrap.dedent(
     """
 ).strip()
 
-# --- Strict Logging Protocol (Do Not Modify) ---
+
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
     error_val = error if error else "null"
     done_val = str(done).lower()
-    # Action string sanitized to avoid breaking line format
+    
     safe_action = action.replace('\n', ' ').replace('\r', '')[:100]
     print(f"[STEP] step={step} action={safe_action} reward={reward:.2f} done={done_val} error={error_val}", flush=True)
 
@@ -57,7 +57,7 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
-# --- Agent Logic ---
+
 def extract_json(text: str) -> dict:
     """Fallback parser in case the LLM wraps JSON in markdown."""
     try:
@@ -96,13 +96,13 @@ def get_model_action(client: OpenAI, step: int, obs: GeoMLObservation, history: 
         parsed_json = extract_json(raw_text)
         return GeoMLAction(**parsed_json)
     except Exception as exc:
-        # Fallback action if the API fails or JSON is malformed
+        
         return GeoMLAction(command="list_files")
 
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
     
-    # Initialize our local environment directly
+    
     env = GeoMLEnv()
     
     history: List[str] = []
@@ -120,16 +120,16 @@ async def main() -> None:
             if env.done:
                 break
 
-            # 1. Ask the LLM what to do
+            
             action_obj = get_model_action(client, step, obs, history)
             
-            # 2. Execute the action in the environment
+            
             obs, reward_obj, done, info = await env.step(action_obj)
             
             reward_val = reward_obj.score
             error = None
             
-            # 3. Track metrics
+            
             rewards.append(reward_val)
             steps_taken = step
             action_str = f"{action_obj.command}({action_obj.filepath})"
@@ -140,7 +140,7 @@ async def main() -> None:
             if done:
                 break
                 
-        # Calculate final normalized score
+        
         MAX_TOTAL_REWARD = 1.60
         score = sum(rewards) / MAX_TOTAL_REWARD
         score = min(max(score, 0.0), 1.0)
