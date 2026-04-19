@@ -81,15 +81,15 @@ if __name__ == "__main__":
 """
         }
 
-    async def reset(self) -> GeoMLObservation:
-        self.max_progress = 0
-        self.done = False
-        self.files = self._generate_procedural_files()
-        self._write_files_to_disk()
+    async def reset(self, task_name="task-1-easy"):
+        self.current_task = task_name
         
-        return self._get_observation(
-            terminal_output="System booted. Workspace provisioned. Run 'pipeline.py' to diagnose errors."
-        )
+        if "task-2" in task_name:
+            self.max_progress = 1
+        elif "task-3" in task_name:
+            self.max_progress = 2
+        else:
+            self.max_progress = 0
 
     def _write_files_to_disk(self):
         for filename, content in self.files.items():

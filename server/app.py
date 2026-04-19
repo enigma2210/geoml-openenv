@@ -8,7 +8,10 @@ env = GeoMLEnv()
 
 @app.post("/reset")
 async def reset_env(payload: dict = Body(default={})):
-    obs = await env.reset()
+    
+    task_req = payload.get("task_name") or payload.get("task_id") or "task-1-easy"
+
+    obs = await env.reset(task_name=task_req)
     return {"observation": obs.model_dump()}
 
 @app.post("/step")
@@ -113,9 +116,3 @@ async def get_dashboard():
     </body>
     </html>
     """
-def main():
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
-
-if __name__ == "__main__":
-    main()
